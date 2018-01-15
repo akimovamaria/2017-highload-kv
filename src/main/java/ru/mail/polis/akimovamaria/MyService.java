@@ -15,9 +15,11 @@ import java.util.regex.Pattern;
  */
 public class MyService implements KVService {
 
+    private final static Pattern ID = Pattern.compile("id=([\\w]*)");
+
     private final HttpServer server;
     private final MyStore store;
-    private final static Pattern ID = Pattern.compile("id=([\\w]*)");
+
 
     public MyService(MyStore myStore, int port) throws IOException {
         server = HttpServer.create(new InetSocketAddress(port), 0);
@@ -44,9 +46,9 @@ public class MyService implements KVService {
                         case "PUT":
                             final InputStream is = http.getRequestBody();
                             final byte value[] = Util.getData(is);
+                            is.close();
                             store.put(id, value);
                             http.sendResponseHeaders(201, 0);
-
                             break;
 
                         case "DELETE":
@@ -56,6 +58,7 @@ public class MyService implements KVService {
 
                         default:
                             http.sendResponseHeaders(405, 0);
+                            break;
                     }
                 }
 

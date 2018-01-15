@@ -13,7 +13,7 @@ public class Util {
         try (final ByteArrayOutputStream os = new ByteArrayOutputStream()){
             int j;
 
-            while ((j = is.read(buf)) >= 0) {
+            while ((j = is.read(buf)) != -1) {
                 os.write(buf, 0, j);
             }
 
