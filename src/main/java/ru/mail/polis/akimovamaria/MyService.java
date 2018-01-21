@@ -7,6 +7,8 @@ import ru.mail.polis.KVService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,7 +18,7 @@ import java.util.regex.Pattern;
 public class MyService implements KVService {
 
     private final static Pattern ID = Pattern.compile("id=([\\w]*)");
-
+    private final static int THREADS = 8;
     private final HttpServer server;
     private final MyStore store;
 
@@ -24,13 +26,10 @@ public class MyService implements KVService {
     public MyService(MyStore myStore, int port) throws IOException {
         server = HttpServer.create(new InetSocketAddress(port), 0);
         store = myStore;
-
+        final ExecutorService executorService = Executors.newFixedThreadPool(THREADS);
         server.createContext("/v0/entity", http -> {
-            if (http.getRequestMethod().equals("GET")) process(http);
-            else {
-                Thread thread = new Thread(() -> process(http));
-                thread.start();
-            }
+            if ("GET".equals(http.getRequestMethod())) process(http);
+            else executorService.submit(() -> process(http));
         });
 
         server.createContext("/v0/status", http -> {
