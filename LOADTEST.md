@@ -1,15 +1,15 @@
-п»ї# РќР°РіСЂСѓР·РѕС‡РЅРѕРµ С‚РµСЃС‚РёСЂРѕРІР°РЅРёРµ
+# Нагрузочное тестирование
 
-РЈС‚РёР»РёС‚Р° `wrk`
-
-
-
-
-## Р РµР·СѓР»СЊС‚Р°С‚С‹ РЅР°РіСЂСѓР·РѕС‡РЅРѕРіРѕ С‚РµСЃС‚РёСЂРѕРІР°РЅРёСЏ РґРѕ РѕРїС‚РёРјРёР·Р°С†РёРё
+Утилита `wrk`
 
 
 
-### `PUT` Р±РµР· РїРµСЂРµР·Р°РїРёСЃРё.
+
+## Результаты нагрузочного тестирования до оптимизации
+
+
+
+### `PUT` без перезаписи.  
 ```
 
 $ wrk --latency -c4 -d2m -s scripts/highload/put.lua http://localhost:8088
@@ -29,7 +29,7 @@ Requests/sec:    670.76
 Transfer/sec:     61.57KB
 ```
 
-### `PUT` СЃ РїРµСЂРµР·Р°РїРёСЃСЊСЋ.
+### `PUT` с перезаписью.
 ```
 
 $ wrk --latency -c4 -d2m -s scripts/highload/putOver.lua http://localhost:8088
@@ -49,7 +49,7 @@ Requests/sec:    768.00
 Transfer/sec:     70.50KB
 ```
 
-### `GET` СЃ С‡С‚РµРЅРёРµРј СЂР°Р·РЅС‹С… Р·Р°РїРёСЃРµР№.
+### `GET` с чтением разных записей.
 ```
 
 $ wrk --latency -c4 -d2m -s scripts/highload/get.lua http://localhost:8088
@@ -69,7 +69,7 @@ Requests/sec:   2655.88
 Transfer/sec:      1.72MB
 ```
 
-### `GET` СЃ С‡С‚РµРЅРёРµРј РѕРіСЂР°РЅРёС‡РµРЅРЅРѕРіРѕ РЅР°Р±РѕСЂР° Р·Р°РїРёСЃРµР№.
+### `GET` с чтением ограниченного набора записей.
 ```
 
 $ wrk --latency -c4 -d2m -s scripts/highload/getOver.lua http://localhost:8088
@@ -110,6 +110,7 @@ Requests/sec:    772.36
 Transfer/sec:    275.01KB
 ```
 
+
 ### `STATUS`.
 ```
 
@@ -134,15 +135,16 @@ Transfer/sec:      0.90MB
 
 
 
-## Р РµР·СѓР»СЊС‚Р°С‚С‹ РЅР°РіСЂСѓР·РѕС‡РЅРѕРіРѕ С‚РµСЃС‚РёСЂРѕРІР°РЅРёСЏ РїРѕСЃР»Рµ РѕРїС‚РёРјРёР·Р°С†РёРё
+## Результаты нагрузочного тестирования после оптимизации
 
-РџРµСЂРµРґРµР»Р°РµРј РѕР±СЂР°Р±РѕС‚РєСѓ get-Р·Р°РїСЂРѕСЃРѕРІ: С‚РµРїРµСЂСЊ, РµСЃР»Рё СЌР»РµРјРµРЅС‚ РЅРµ РЅР°Р№РґРµРЅ РІ Р±Р°Р·Рµ, РјРµС‚РѕРґ
-`MyStore.get()` РІРѕР·РІСЂР°С‰Р°РµС‚ `null`, Р° РЅРµ РІС‹Р±СЂР°СЃС‹РІР°РµС‚ `NoSuchElementException`. 
-Р‘СѓРґРµРј РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ `try-with-resources` РІ `MyStore`. РџРѕРїСЂРѕР±СѓРµРј РѕР±СЂР°Р±Р°С‚С‹РІР°С‚СЊ РєРѕРЅС‚РµРєСЃС‚
-/v0/entity РІ РѕС‚РґРµР»СЊРЅРѕРј РїРѕС‚РѕРєРµ: put СЃС‚Р°Р» Р±С‹СЃС‚СЂРµРµ, РЅРѕ get РјРµРґР»РµРЅРЅРµРµ. РЎРґРµР»Р°РµРј РѕР±СЂР°Р±РѕС‚РєСѓ get 
-РІ РіР»Р°РІРЅРѕРј РїРѕС‚РѕРєРµ, Р° РѕСЃС‚Р°Р»СЊРЅС‹Рµ РјРµС‚РѕРґС‹ - РІ РѕС‚РґРµР»СЊРЅРѕРј.  
+Переделаем обработку get-запросов: теперь, если элемент не найден в базе, метод
+`MyStore.get()` возвращает `null`, а не выбрасывает `NoSuchElementException`. 
+Будем использовать `try-with-resources` в `MyStore`. Попробуем обрабатывать контекст
+/v0/entity в отдельном потоке: put стал быстрее, но get медленнее. Сделаем обработку get 
+в главном потоке, а остальные методы - в отдельном.  
 
-### `PUT` Р±РµР· РїРµСЂРµР·Р°РїРёСЃРё.
+### `PUT` без перезаписи.
+## Состояние базы: пустая.
 ```
 
 $ wrk --latency -c4 -d2m -s scripts/highload/put.lua http://localhost:8088
@@ -150,19 +152,41 @@ $ wrk --latency -c4 -d2m -s scripts/highload/put.lua http://localhost:8088
 Running 2m test @ http://localhost:8088
   2 threads and 4 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency     9.12ms   32.81ms 523.40ms   96.87%
-    Req/Sec   448.72     79.56     1.09k    93.30%
+    Latency    18.39ms   67.45ms 878.70ms   93.87%
+    Req/Sec     1.35k   442.94     1.83k    84.64%
   Latency Distribution
-     50%    4.09ms
-     75%    4.54ms
-     90%    5.19ms
-     99%  178.03ms
-  105874 requests in 2.00m, 9.49MB read
-Requests/sec:    881.69
-Transfer/sec:     80.94KB
+     50%    1.03ms
+     75%    1.41ms
+     90%   33.48ms
+     99%  367.08ms
+  303083 requests in 2.00m, 27.17MB read
+Requests/sec:   2524.09
+Transfer/sec:    231.70KB
 ```
 
-### `PUT` СЃ РїРµСЂРµР·Р°РїРёСЃСЊСЋ.
+## Состояние базы: 400 тыс записей.
+```
+
+$ wrk --latency -c4 -d2m -s scripts/highload/put.lua http://localhost:8088
+
+Running 2m test @ http://localhost:8088
+  2 threads and 4 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    16.86ms   66.95ms 870.77ms   94.36%
+    Req/Sec     1.49k   428.61     2.20k    86.50%
+  Latency Distribution
+     50%    0.95ms
+     75%    1.25ms
+     90%   21.20ms
+     99%  360.57ms
+  338104 requests in 2.00m, 30.31MB read
+Requests/sec:   2816.19
+Transfer/sec:    258.52KB
+```
+
+
+### `PUT` с перезаписью.
+## Состояние базы: пустая.
 ```
 
 $ wrk --latency -c4 -d2m -s scripts/highload/putOver.lua http://localhost:8088
@@ -170,19 +194,40 @@ $ wrk --latency -c4 -d2m -s scripts/highload/putOver.lua http://localhost:8088
 Running 2m test @ http://localhost:8088
   2 threads and 4 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency     8.15ms   32.64ms 511.36ms   96.91%
-    Req/Sec   570.96     91.13   747.00     93.25%
+    Latency    14.13ms   56.20ms 647.49ms   94.12%
+    Req/Sec     1.89k   422.98     2.24k    91.70%
   Latency Distribution
-     50%    3.14ms
-     75%    3.46ms
-     90%    3.91ms
-     99%  185.26ms
-  134422 requests in 2.00m, 12.05MB read
-Requests/sec:   1119.81
-Transfer/sec:    102.80KB
+     50%  765.00us
+     75%    0.89ms
+     90%    1.50ms
+     99%  312.88ms
+  429887 requests in 2.00m, 38.54MB read
+Requests/sec:   3580.86
+Transfer/sec:    328.71KB
 ```
 
-### `GET` СЃ С‡С‚РµРЅРёРµРј СЂР°Р·РЅС‹С… Р·Р°РїРёСЃРµР№.
+## Состояние базы: 400 тыс записей.
+```
+
+$ wrk --latency -c4 -d2m -s scripts/highload/putOver.lua http://localhost:8088
+
+Running 2m test @ http://localhost:8088
+  2 threads and 4 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    13.03ms   51.13ms 499.56ms   94.04%
+    Req/Sec     1.96k   439.22     2.30k    90.00%
+  Latency Distribution
+     50%  739.00us
+     75%  840.00us
+     90%    1.45ms
+     99%  290.34ms
+  445752 requests in 2.00m, 39.96MB read
+Requests/sec:   3713.24
+Transfer/sec:    340.86KB
+```
+
+### `GET` с чтением разных записей. 
+## Состояние базы: 1 млн записей.
 ```
 
 $ wrk --latency -c4 -d2m -s scripts/highload/get.lua http://localhost:8088
@@ -202,7 +247,8 @@ Requests/sec:   3344.97
 Transfer/sec:      2.17MB
 ```
 
-### `GET` СЃ С‡С‚РµРЅРёРµРј РѕРіСЂР°РЅРёС‡РµРЅРЅРѕРіРѕ РЅР°Р±РѕСЂР° Р·Р°РїРёСЃРµР№.
+### `GET` с чтением ограниченного набора записей.
+## Состояние базы: 1 млн записей.
 ```
 
 $ wrk --latency -c4 -d2m -s scripts/highload/getOver.lua http://localhost:8088
@@ -223,6 +269,7 @@ Transfer/sec:      4.74MB
 ```
 
 ### `PUT` + `GET`.
+## Состояние базы: пустая.
 ```
 
 $ wrk --latency -c4 -d2m -s scripts/highload/putget.lua http://localhost:8088
@@ -230,20 +277,42 @@ $ wrk --latency -c4 -d2m -s scripts/highload/putget.lua http://localhost:8088
 Running 2m test @ http://localhost:8088
   2 threads and 4 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency     5.77ms   23.57ms 426.85ms   97.11%
-    Req/Sec   802.02    124.11     1.00k    90.95%
+    Latency    12.18ms   52.61ms 686.57ms   95.05%
+    Req/Sec     1.48k   340.54     1.86k    90.31%
   Latency Distribution
-     50%    2.42ms
-     75%    3.16ms
-     90%    3.83ms
-     99%  131.01ms
-  189500 requests in 2.00m, 62.05MB read
-  Non-2xx or 3xx responses: 1157
-Requests/sec:   1579.02
-Transfer/sec:    529.43KB
+     50%    1.18ms
+     75%    1.58ms
+     90%    2.34ms
+     99%  309.55ms
+  342013 requests in 2.00m, 103.86MB read
+  Non-2xx or 3xx responses: 32286
+Requests/sec:   2848.98
+Transfer/sec:      0.87MB
+```
+
+## Состояние базы: 400 тыс записей.
+```
+
+$ wrk --latency -c4 -d2m -s scripts/highload/putget.lua http://localhost:8088
+
+Running 2m test @ http://localhost:8088
+  2 threads and 4 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    12.68ms   56.24ms 644.17ms   95.43%
+    Req/Sec     1.50k   325.69     1.87k    90.71%
+  Latency Distribution
+     50%    1.17ms
+     75%    1.57ms
+     90%    2.24ms
+     99%  349.18ms
+  345917 requests in 2.00m, 105.24MB read
+  Non-2xx or 3xx responses: 32392
+Requests/sec:   2881.61
+Transfer/sec:      0.88MB
 ```
 
 ### `STATUS`.
+## Состояние базы: 100 тыс записей.
 ```
 
 $ wrk --latency -c4 -d2m -s scripts/highload/status.lua http://localhost:8088
@@ -263,12 +332,13 @@ Requests/sec:  11952.11
 Transfer/sec:      0.92MB
 ```
 
-## РС‚РѕРіРё РѕРїС‚РёРјРёР·Р°С†РёРё
-- `PUT` Р±РµР· РїРµСЂРµР·Р°РїРёСЃРё - СЃСЂРµРґРЅРµРµ С‡РёСЃР»Рѕ Р·Р°РїСЂРѕСЃРѕРІ РІ СЃРµРєСѓРЅРґСѓ СѓРІРµР»РёС‡РёР»РѕСЃСЊ РїСЂРёРјРµСЂРЅРѕ РЅР° 25%
-- `PUT` СЃ РїРµСЂРµР·Р°РїРёСЃСЊСЋ - СЃСЂРµРґРЅРµРµ С‡РёСЃР»Рѕ Р·Р°РїСЂРѕСЃРѕРІ РІ СЃРµРєСѓРЅРґСѓ СѓРІРµР»РёС‡РёР»РѕСЃСЊ РїСЂРёРјРµСЂРЅРѕ РЅР° 30%
-- `GET` СЃ С‡С‚РµРЅРёРµРј СЂР°Р·РЅС‹С… Р·Р°РїРёСЃРµР№ - СЃСЂРµРґРЅРµРµ С‡РёСЃР»Рѕ Р·Р°РїСЂРѕСЃРѕРІ РІ СЃРµРєСѓРЅРґСѓ СѓРІРµР»РёС‡РёР»РѕСЃСЊ РїСЂРёРјРµСЂРЅРѕ РЅР° 25%
-- `GET` СЃ С‡С‚РµРЅРёРµРј РѕРіСЂР°РЅРёС‡РµРЅРЅРѕРіРѕ РЅР°Р±РѕСЂР° Р·Р°РїРёСЃРµР№ - СЃСЂРµРґРЅРµРµ С‡РёСЃР»Рѕ Р·Р°РїСЂРѕСЃРѕРІ РІ СЃРµРєСѓРЅРґСѓ РѕСЃС‚Р°Р»РѕСЃСЊ РїРѕС‡С‚Рё С‚Р°РєРёРј Р¶Рµ, РЅРѕ СѓРјРµРЅСЊС€РёР»Р°СЃСЊ Р·Р°РґРµСЂР¶РєР° РїСЂРёРјРµСЂРЅРѕ РЅР° 25%
-- `PUT` + `GET` - СЃСЂРµРґРЅРµРµ С‡РёСЃР»Рѕ Р·Р°РїСЂРѕСЃРѕРІ РІ СЃРµРєСѓРЅРґСѓ СѓРІРµР»РёС‡РёР»РѕСЃСЊ РїСЂРёРјРµСЂРЅРѕ РІ 2 СЂР°Р·Р°
-- `STATUS` - СЂРµР·СѓР»СЊС‚Р°С‚С‹ РїСЂРёРјРµСЂРЅРѕ С‚Рµ Р¶Рµ.
+## Итоги оптимизации
+`PUT` без перезаписи - среднее число запросов в секунду увеличилось примерно в 4 раза
+`PUT` с перезаписью - среднее число запросов в секунду увеличилось примерно в 5 раз
+`GET` с чтением разных записей - среднее число запросов в секунду увеличилось примерно на 25%
+`GET` с чтением ограниченного набора записей - среднее число запросов в секунду осталось почти таким же, но уменьшилась задержка примерно на 25%
+`PUT` + `GET` - среднее число запросов в секунду увеличилось примерно в 4 раза
+`STATUS` - результаты примерно те же.
 
-РРјРµРµРј С…РѕСЂРѕС€РµРµ СѓРІРµР»РёС‡РµРЅРёРµ Р±С‹СЃС‚СЂРѕРґРµР№СЃС‚РІРёСЏ `PUT`, РґР»СЏ GET Р±С‹СЃС‚СЂРѕРґРµР№СЃС‚РІРёРµ СѓРІРµР»РёС‡РёР»РѕСЃСЊ РјРµРЅРµРµ Р·РЅР°С‡РёС‚РµР»СЊРЅРѕ.
+Имеем хорошее увеличение быстродействия `PUT`, для GET быстродействие увеличилось менее значительно.
+Для раз состояний базы, когда она пустая или наполнена (примерно 400 тыс записей), быстродействие одинаковое.
